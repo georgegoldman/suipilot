@@ -1,9 +1,11 @@
 import { Transaction } from "@mysten/sui/transactions";
+import { testnetPackageIds } from "./constant";
 
-// DeepBook V3 Mainnet Package ID (Check for Testnet/Devnet IDs as needed)
-export const DEEPBOOK_PACKAGE_ID = "0xdee9"; // Replace with actual V3 package ID if different on testnet
+// DeepBook V3 Package IDs
+export const DEEPBOOK_PACKAGE_ID = testnetPackageIds.DEEPBOOK_PACKAGE_ID;
 export const DEEPBOOK_MODULE = "deepbook";
 export const BALANCE_MANAGER_MODULE = "balance_manager";
+export const DDEEP_TREASURY_ID = testnetPackageIds.DEEP_TREASURY_ID;
 
 // Order Restrictions (u8)
 export const ORDER_RESTRICTION = {
@@ -22,14 +24,22 @@ export const SELF_MATCHING = {
 
 /**
  * 1. Setup: Create a Balance Manager
- * Required before a user can place limit orders.
+ * CRITICAL FIX: The BalanceManager MUST be a Shared Object.
+ * If it is owned (private), Takers cannot match against your Limit Orders.
+ * We use `0x2::transfer::public_share_object` to share it immediately.
  */
-export function createBalanceManagerTx(): Transaction {
+export function createBalanceManagerTx(signerAddress: string): Transaction {
   const tx = new Transaction();
-  tx.moveCall({
+
+  // Create the BalanceManager object
+  const [manager] = tx.moveCall({
     target: `${DEEPBOOK_PACKAGE_ID}::${BALANCE_MANAGER_MODULE}::new`,
     arguments: [],
   });
+
+  // Share it so the Pool can access it for matching (required for Makers)
+  tx.transferObjects([manager], tx.pure.address(signerAddress));
+
   return tx;
 }
 
@@ -61,34 +71,19 @@ export function withdrawTx(
   balanceManagerId: string,
   amount: bigint | number,
   coinType: string,
+  signerAddress: string,
 ): Transaction {
   const tx = new Transaction();
 
   // Withdraw returns a Coin object
-  const withdrawnCoin = tx.moveCall({
+  const [withdrawnCoin] = tx.moveCall({
     target: `${DEEPBOOK_PACKAGE_ID}::${BALANCE_MANAGER_MODULE}::withdraw`,
     typeArguments: [coinType],
     arguments: [tx.object(balanceManagerId), tx.pure.u64(amount)],
   });
 
-  // Transfer the withdrawn coin to the user
-  tx.transferObjects([withdrawnCoin], tx.pure.address(tx.object("0x0"))); // 0x0 is placeholder for sender in some contexts, but better to use transferObjects without explicit recipient (defaults to sender) or explicit sender.
-  // Actually, standard practice for PTB "transfer to sender":
-  // We don't need explicit sender address if we assume the signer is the recipient.
-  // But wait, moveCall returns a result. We must transfer it.
-  // The SDK automatically handles "transfer to sender" if you don't specify,
-  // BUT explicitly:
-  // tx.transferObjects([withdrawnCoin], tx.pure.sender()); // This depends on SDK version
-
-  // SAFE FALLBACK: Just use the moveCall.
-  // Note: If you don't transfer it, the transaction fails if the coin doesn't have Drop.
-  // Let's assume the user handles the transfer logic or we use `transfer_public_to_sender` if available.
-  // Ideally:
-  tx.transferObjects(
-    [withdrawnCoin],
-    tx.pure.address("YOUR_SENDER_ADDRESS_HERE_OR_HANDLE_DYNAMICALLY"),
-  );
-  // *Dev Note:* In your UI, pass the current user's address to this function to fill this field.
+  // Transfer the withdrawn coin explicitly to the user
+  tx.transferObjects([withdrawnCoin], tx.pure.address(signerAddress));
 
   return tx;
 }
@@ -207,6 +202,7 @@ export function swapExactBaseForQuoteTx(
     arguments: [
       tx.object(poolId),
       tx.object(coinId),
+      tx.pure.u64(minQuoteOut), // FIX: Added missing minQuoteOut argument
       tx.object("0x6"), // Clock
     ],
   });
