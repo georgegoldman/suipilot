@@ -1,0 +1,15 @@
+{
+  "tasks": {
+    "dev": "deno run -A --env --watch src/api/server.ts",
+    "cli": "deno run -A src/cli/main.ts",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
+  },
+  "imports": {
+    "@mysten/deepbook-v3": "npm:@mysten/deepbook-v3@^1.0.1",
+    "@std/assert": "jsr:@std/assert@1",
+    "@mysten/sui": "npm:@mysten/sui@^2.2.0",
+    "zod": "npm:zod@^3.23.0",
+    "hono": "npm:hono@^4.0.0"
+  }
+}
