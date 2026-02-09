@@ -10,7 +10,6 @@ import { ReviewCard } from "./_components/review-card";
 import { WalletOverlay } from "./_components/wallet-overlay";
 import { SuccessToast } from "./_components/success-toast";
 import { dAppKit } from "../dapp-kit";
-import { is } from "zod/v4/locales";
 
 type TradePhase = "idle" | "review" | "signing" | "executing" | "success";
 
@@ -51,23 +50,39 @@ export default function TradePage() {
 
   async function handleExecute() {
     if (!pendingTx) return;
-
-    setPhase("signing");
-
-    const result = await dAppKit.signAndExecuteTransaction({
-      transaction: pendingTx,
-    });
-
-    if (result.FailedTransaction) {
-      console.error("Transaction failed:", result.FailedTransaction);
-      setError("Transaction failed. Check console for details.");
+    try {
+      // will throw if the tx is malformed
+      pendingTx.getData();
+      console.log("TX ok:", pendingTx);
+    } catch (e) {
+      console.error("TX is invalid / not serializable:", e);
+      setError("Transaction is invalid (cannot be serialized).");
       setPhase("review");
       return;
     }
 
-    setDigest(result.Transaction.digest);
-    setPhase("success");
-    setTimeout(resetState, 5000);
+    setPhase("signing");
+
+    try {
+      const result = await dAppKit.signAndExecuteTransaction({
+        transaction: pendingTx,
+      });
+
+      if (result?.FailedTransaction) {
+        console.error("Transaction failed:", result.FailedTransaction);
+        setError("Transaction failed. Check console for details.");
+        setPhase("review");
+        return;
+      }
+
+      setDigest(result?.Transaction?.digest ?? null);
+      setPhase("success");
+      setTimeout(resetState, 5000);
+    } catch (e) {
+      console.error("Wallet rejected / wallet error:", e);
+      setError("Transaction was rejected or wallet failed.");
+      setPhase("review"); // 🔥 important so overlay disappears
+    }
   }
 
   function resetState() {
