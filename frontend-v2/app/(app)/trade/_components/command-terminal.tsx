@@ -5,15 +5,21 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateDeepBookTransaction } from "../../hooks/useAiAgent"; // Import the AI Hook
-import { useCurrentAccount } from "@mysten/dapp-kit";
+
 import { Transaction } from "@mysten/sui/transactions";
+import { IntentSpec, Quote } from "@/lib/types";
+import { dAppKit } from "../../dapp-kit";
+
+type AgentResult = {
+  text: string;
+  transaction: Transaction | null;
+  intent: IntentSpec | null;
+  quote?: Quote | null;
+};
 
 interface CommandTerminalProps {
   // Updated signature to handle both text response and transaction object
-  onIntentParsed: (result: {
-    text: string;
-    transaction: Transaction | null;
-  }) => void;
+  onIntentParsed: (result: AgentResult) => void;
   onError: (error: string) => void;
   disabled?: boolean;
 }
@@ -31,7 +37,7 @@ export function CommandTerminal({
 }: CommandTerminalProps) {
   const [prompt, setPrompt] = useState("");
   const [isParsing, setIsParsing] = useState(false);
-  const account = useCurrentAccount();
+  const account = dAppKit.stores.$connection.get().account;
 
   async function handleSubmit() {
     if (!prompt.trim() || isParsing || disabled) return;

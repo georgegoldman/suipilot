@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SuccessToastProps {
+  txDigest: string;
   onDismiss: () => void;
 }
 
@@ -23,8 +24,8 @@ export function SuccessToast({ onDismiss }: SuccessToastProps) {
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="fixed top-8 right-8 z-[60] max-w-md"
       >
-        <div className="bg-[#0F0F0F] border border-white/[0.06] rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)] p-4 flex items-start gap-3">
-          <div className="size-8 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+        <div className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-[#0F0F0F] p-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-green-500/20">
             <svg
               width="18"
               height="18"
@@ -39,16 +40,13 @@ export function SuccessToast({ onDismiss }: SuccessToastProps) {
             </svg>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-white text-sm mb-0.5">
+          <div className="min-w-0 flex-1">
+            <h4 className="mb-0.5 text-sm font-medium text-white">
               Trade executed!
             </h4>
-            <p className="text-xs text-brand-muted">
+            <p className="text-brand-muted text-xs">
               Receipt archived to Walrus.{" "}
-              <a
-                href="/history"
-                className="text-brand-accent hover:underline"
-              >
+              <a href="/history" className="text-brand-accent hover:underline">
                 View History
               </a>
             </p>
@@ -56,7 +54,7 @@ export function SuccessToast({ onDismiss }: SuccessToastProps) {
 
           <button
             onClick={onDismiss}
-            className="text-brand-muted hover:text-white transition-colors shrink-0"
+            className="text-brand-muted shrink-0 transition-colors hover:text-white"
             aria-label="Dismiss"
           >
             <svg

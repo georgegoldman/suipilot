@@ -2,67 +2,78 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Transaction } from "@mysten/sui/transactions"; // Ensure this matches utils/deepbook.ts
+import { Transaction } from "@mysten/sui/transactions";
 
+import type { IntentSpec, Quote } from "@/lib/types";
 import { CommandTerminal } from "./_components/command-terminal";
 import { ReviewCard } from "./_components/review-card";
 import { WalletOverlay } from "./_components/wallet-overlay";
 import { SuccessToast } from "./_components/success-toast";
 import { dAppKit } from "../dapp-kit";
+import { is } from "zod/v4/locales";
 
 type TradePhase = "idle" | "review" | "signing" | "executing" | "success";
 
+type AgentResult = {
+  text: string;
+  transaction: Transaction | null;
+  intent: IntentSpec | null;
+  quote?: Quote | null; // optional until you implement real quoting
+};
+
 export default function TradePage() {
   const [phase, setPhase] = useState<TradePhase>("idle");
-  const [aiResponse, setAiResponse] = useState<string>("");
+  const [aiResponse, setAiResponse] = useState("");
   const [pendingTx, setPendingTx] = useState<Transaction | null>(null);
+  const [pendingIntent, setPendingIntent] = useState<IntentSpec | null>(null);
+  const [pendingQuote, setPendingQuote] = useState<Quote | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
 
-  // 1. Handle response from AI
-  function handleParsed(result: {
-    text: string;
-    transaction: Transaction | null;
-  }) {
-    console.log("AI Result:", result); // Debug log
+  function handleParsed(result: AgentResult) {
+    console.log("AI Result:", result);
     setAiResponse(result.text);
     setError(null);
 
-    if (result.transaction) {
+    // ✅ Only enter review when we have both tx + intent
+    if (result.transaction && result.intent) {
       setPendingTx(result.transaction);
+      setPendingIntent(result.intent);
+      setPendingQuote(result.quote ?? null);
       setPhase("review");
     } else {
+      setPendingTx(null);
+      setPendingIntent(null);
+      setPendingQuote(null);
       setPhase("idle");
     }
   }
 
-  // 2. Execute the Transaction
   async function handleExecute() {
-    if (!pendingTx) {
-      console.error("No pending transaction found");
-      return;
-    }
+    if (!pendingTx) return;
 
     setPhase("signing");
 
-    // CRITICAL: The object passed here must have the property 'transaction'
     const result = await dAppKit.signAndExecuteTransaction({
       transaction: pendingTx,
     });
+
     if (result.FailedTransaction) {
       console.error("Transaction failed:", result.FailedTransaction);
       setError("Transaction failed. Check console for details.");
       setPhase("review");
-    } else {
-      console.log("Execution Success:", result);
-      setDigest(result.Transaction.digest);
-      setPhase("success");
-      setTimeout(resetState, 5000);
+      return;
     }
+
+    setDigest(result.Transaction.digest);
+    setPhase("success");
+    setTimeout(resetState, 5000);
   }
 
   function resetState() {
     setPendingTx(null);
+    setPendingIntent(null);
+    setPendingQuote(null);
     setAiResponse("");
     setError(null);
     setDigest(null);
@@ -70,15 +81,14 @@ export default function TradePage() {
   }
 
   const isTerminalDisabled = !["idle", "review"].includes(phase);
+  const isExecuting = phase === "signing" || phase === "executing";
 
   return (
     <div className="relative flex h-screen flex-col pt-20">
-      {/* Background Gradients */}
       <div className="bg-brand-accent/[0.04] pointer-events-none absolute top-0 left-1/4 size-[600px] rounded-full blur-[120px]" />
       <div className="bg-brand-accent/[0.03] pointer-events-none absolute right-1/4 bottom-0 size-[400px] rounded-full blur-[100px]" />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center overflow-auto px-4">
-        {/* Error Message */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -92,7 +102,6 @@ export default function TradePage() {
         )}
 
         <AnimatePresence mode="wait">
-          {/* IDLE: Show AI Response or Welcome */}
           {phase === "idle" && (
             <motion.div
               key="hero"
@@ -117,8 +126,7 @@ export default function TradePage() {
             </motion.div>
           )}
 
-          {/* REVIEW: Show Transaction details */}
-          {phase === "review" && pendingTx && (
+          {phase === "review" && pendingTx && pendingIntent && (
             <motion.div
               key="review"
               initial={{ opacity: 0, y: 30 }}
@@ -128,32 +136,17 @@ export default function TradePage() {
               className="w-full max-w-2xl"
             >
               <ReviewCard
-                intent={{
-                  type: "market_buy", // Mock for visualization
-                  sell: { asset: "Asset", amount: "..." },
-                  buy: { asset: "Target", amount: "..." },
-                }}
-                quote={{
-                  expectedOut: "Ready to Execute",
-                  priceImpactBps: 0,
-                  slippageBps: 0,
-                  routePlan: {
-                    market: "DeepBook V3",
-                    orderType: "AI Transaction",
-                  },
-                }}
-                // Make sure your ReviewCard accepts this prop, or remove it if not needed
-                aiReasoning={aiResponse}
+                intent={pendingIntent}
+                quote={pendingQuote} // can be null/undefined now if you made ReviewCard optional
                 onCancel={resetState}
                 onExecute={handleExecute}
-                isExecuting={false}
+                isExecuting={isExecuting}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Terminal Input */}
       <div className="relative z-10 mx-auto w-full max-w-2xl shrink-0 px-4 pb-8">
         <CommandTerminal
           onIntentParsed={handleParsed}
@@ -162,13 +155,12 @@ export default function TradePage() {
         />
       </div>
 
-      {/* Overlays */}
       <AnimatePresence>
         {phase === "signing" && <WalletOverlay />}
       </AnimatePresence>
 
       {phase === "success" && (
-        <SuccessToast digest={digest} onDismiss={resetState} />
+        <SuccessToast txDigest={digest ?? "no digest"} onDismiss={resetState} />
       )}
     </div>
   );

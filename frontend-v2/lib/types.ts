@@ -45,7 +45,7 @@ export type IntentSpec = {
     orderId?: string; // required for CANCEL/MODIFY
     side?: OrderSide; // BID (buy base with quote) or ASK
     type?: OrderType; // MARKET or LIMIT
-    quantity?: string; // in lots/raw units your UI uses
+    quantity?: { unit: "BASE" | "QUOTE"; amount: string }; // in lots/raw units your UI uses
     limitPrice?: string; // required for LIMIT
     timeInForce?: TimeInForce; // optional
     expireTimestampMs?: number; // optional
