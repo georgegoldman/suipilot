@@ -61,7 +61,7 @@ export function CommandTerminal({
         const balanceManagerId = await selectObject(
           dAppKit.getClient(),
           dAppKit.stores.$connection.get().account!.address,
-          "0x22be4cade64bf2d02412c7e8d0e8beea2f78828b948118d46735315409371a3c::balance_manager::BalanceManager",
+          "0xfb28c4cbc6865bd1c897d26aecbe1f8792d1509a20ffec692c800660cbec6982::balance_manager::BalanceManager",
         );
       } catch (e) {
         const tx = dbTx.createBalanceManagerTx(account.address);
