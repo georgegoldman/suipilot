@@ -3,11 +3,40 @@ import { deepbookTools, COIN_MAP } from "../ai/tools";
 import * as dbTx from "../utils/deepbook";
 import { Transaction } from "@mysten/sui/transactions";
 import type { IntentSpec } from "@/lib/types";
+import { testnetPools } from "../utils/constant";
+import { testnetCoins, mainnetCoins } from "../utils/constant";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { dAppKit } from "../dapp-kit";
+import { selectCoinObjectId } from "../lib/coinSelector";
+
+const COIN_TYPES = testnetCoins;
+const client = dAppKit.getClient();
+const userAddress = dAppKit.stores.$connection.get().account?.address;
+
+function coinTypeFromSymbol(symbol: string) {
+  const key = symbol.toUpperCase();
+  const entry = (COIN_TYPES as any)[key];
+  if (!entry?.type) throw new Error(`Unsupported coin symbol: ${symbol}`);
+  return entry.type as string;
+}
+
+function coinScalarFromSymbol(symbol: string) {
+  const key = symbol.toUpperCase();
+  const entry = (COIN_TYPES as any)[key];
+  if (!entry?.scalar) throw new Error(`Missing scalar for symbol: ${symbol}`);
+  return entry.scalar as number;
+}
 
 const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
 const POOL_IDS: Record<string, string> = {
-  "SUI/USDC": "0xPOOL_ID_FOR_SUI_USDC",
+  "SUI/USDC": testnetPools.SUI_DBUSDC.address,
+  "DEEP/SUI": testnetPools.DEEP_SUI.address,
+  "DEEP/USDC": testnetPools.DEEP_DBUSDC.address,
+  "USDT/USDC": testnetPools.DBUSDT_DBUSDC.address,
+  "WAL/USDC": testnetPools.WAL_DBUSDC.address,
+  "WAL/SUI": testnetPools.WAL_SUI.address,
+  "BTC/USDC": testnetPools.DBTC_DBUSDC.address,
 };
 
 export type AgentResult = {
@@ -66,11 +95,12 @@ export async function generateDeepBookTransaction(
 
         const asset = args!.asset as string; // e.g. "SUI"
         const amount = String(args!.amount); // keep as string
-        const coinType = COIN_MAP[asset];
+        const coinType = coinTypeFromSymbol(asset);
 
-        const mockCoinId = "0xCOIN_OBJECT_ID"; // replace with real coin selection
+        // const mockCoinId = "0xCOIN_OBJECT_ID"; // replace with real coin selection
+        const coinId = await selectCoinObjectId(client, userAddress, coinType);
 
-        tx = dbTx.depositTx(userBalanceManagerId, mockCoinId, coinType);
+        tx = dbTx.depositTx(userBalanceManagerId, coinId, coinType);
         reply = `Depositing ${amount} ${asset} into your account.`;
 
         intent = {
@@ -98,16 +128,18 @@ export async function generateDeepBookTransaction(
 
         const poolId = POOL_IDS[pair];
         if (!poolId) throw new Error(`Unsupported pair: ${pair}`);
+        const baseCoinType = coinTypeFromSymbol(base);
+        const quoteCoinType = coinTypeFromSymbol(quote);
 
         tx = dbTx.placeLimitOrderTx(
           poolId,
           userBalanceManagerId,
           Date.now(),
-          BigInt((args!.price as number) * 1_000_000_000),
-          BigInt((args!.quantity as number) * 1_000_000_000),
+          BigInt((args!.price as number) * coinScalarFromSymbol(quote)),
+          BigInt((args!.quantity as number) * coinScalarFromSymbol(base)),
           side === "buy",
-          COIN_MAP[base],
-          COIN_MAP[quote],
+          baseCoinType,
+          quoteCoinType,
         );
 
         reply = `Placing limit order: ${side} ${quantity} ${base} at ${price}.`;

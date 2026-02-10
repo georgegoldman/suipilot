@@ -10,6 +10,8 @@ import { ReviewCard } from "./_components/review-card";
 import { WalletOverlay } from "./_components/wallet-overlay";
 import { SuccessToast } from "./_components/success-toast";
 import { dAppKit } from "../dapp-kit";
+import { createBalanceManagerTx } from "../utils/deepbook";
+import { set } from "zod/v3";
 
 type TradePhase = "idle" | "review" | "signing" | "executing" | "success";
 
@@ -49,6 +51,13 @@ export default function TradePage() {
   }
 
   async function handleExecute() {
+    if (!pendingIntent) return;
+    if (pendingIntent.action === "CREATE_BALANCE_MANAGER") {
+      const tx = createBalanceManagerTx(
+        dAppKit.stores.$connection.get().account!.address,
+      );
+      setPendingTx(tx);
+    }
     if (!pendingTx) return;
     try {
       // will throw if the tx is malformed

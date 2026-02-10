@@ -6,6 +6,7 @@ export type DeepBookAction =
   | "CANCEL_ORDER"
   | "MODIFY_ORDER"
   | "CLAIM_REBATES"
+  | "CREATE_BALANCE_MANAGER"
   | "FLASH_LOAN"; // optional, but useful later
 
 export type OrderSide = "BID" | "ASK";

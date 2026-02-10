@@ -9,6 +9,7 @@ import { generateDeepBookTransaction } from "../../hooks/useAiAgent"; // Import 
 import { Transaction } from "@mysten/sui/transactions";
 import { IntentSpec, Quote } from "@/lib/types";
 import { dAppKit } from "../../dapp-kit";
+import { selectObject } from "../../lib/objectSelector";
 
 type AgentResult = {
   text: string;
@@ -52,10 +53,31 @@ export function CommandTerminal({
       // 1. Call Gemini to parse intent and generate transaction
       // Note: In a production app, you should fetch the user's real BalanceManager ID
       // from a context or on-chain query.
+
+      // check if this user has the balance manager in their wallet
+      let balanceManagerId: string | undefined;
+      try {
+        const balanceManagerId = await selectObject(
+          dAppKit.getClient(),
+          dAppKit.stores.$connection.get().account!.address,
+          "0x22be4cade64bf2d02412c7e8d0e8beea2f78828b948118d46735315409371a3c::balance_manager::BalanceManager",
+        );
+      } catch (e) {
+        onIntentParsed({
+          text: "You don’t have a DeepBook Balance Manager yet. Create one to start trading?",
+          transaction: null,
+          intent: {
+            intentId: String(Date.now()),
+            owner: account.address,
+            action: "CREATE_BALANCE_MANAGER", // make sure your IntentSpec supports this
+          } as any,
+        });
+        return;
+      }
       const result = await generateDeepBookTransaction(
         prompt,
         account.address,
-        "0xYOUR_BALANCE_MANAGER_ID", // TODO: Replace with actual fetched ID
+        balanceManagerId, // TODO: Replace with actual fetched ID
       );
 
       // 2. Pass the result (text + tx) up to the parent page
