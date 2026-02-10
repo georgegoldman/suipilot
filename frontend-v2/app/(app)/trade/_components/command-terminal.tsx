@@ -10,6 +10,7 @@ import { Transaction } from "@mysten/sui/transactions";
 import { IntentSpec, Quote } from "@/lib/types";
 import { dAppKit } from "../../dapp-kit";
 import { selectObject } from "../../lib/objectSelector";
+import * as dbTx from "@/app/(app)/utils/deepbook";
 
 type AgentResult = {
   text: string;
@@ -63,9 +64,10 @@ export function CommandTerminal({
           "0x22be4cade64bf2d02412c7e8d0e8beea2f78828b948118d46735315409371a3c::balance_manager::BalanceManager",
         );
       } catch (e) {
+        const tx = dbTx.createBalanceManagerTx(account.address);
         onIntentParsed({
-          text: "You don’t have a DeepBook Balance Manager yet. Create one to start trading?",
-          transaction: null,
+          text: "You don’t have a DeepBook Balance Manager yet. Review and sign to create one.",
+          transaction: tx,
           intent: {
             intentId: String(Date.now()),
             owner: account.address,

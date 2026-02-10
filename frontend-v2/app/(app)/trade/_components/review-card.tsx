@@ -20,8 +20,6 @@ export function ReviewCard({
   onExecute,
   isExecuting,
 }: ReviewCardProps) {
-  const fromToken = intent.sell?.coinType?.split("::").pop() || "UNKNOWN";
-  const toToken = intent.buy?.coinType?.split("::").pop() || "UNKNOWN";
   const INTENT_LABELS: Record<IntentSpec["action"], string> = {
     DEPOSIT: "Deposit",
     WITHDRAW: "Withdraw",
@@ -31,7 +29,68 @@ export function ReviewCard({
     MODIFY_ORDER: "Modify Order",
     CLAIM_REBATES: "Claim Rebates",
     FLASH_LOAN: "Flash Loan",
+    CREATE_BALANCE_MANAGER: "Create Balance Manager",
   };
+
+  // ✅ Special-case: Balance Manager creation has no sell/buy/quote
+  if (intent.action === "CREATE_BALANCE_MANAGER") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <div className="bg-brand-card overflow-hidden rounded-2xl border border-white/6 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+          <div className="p-6 pb-0">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="font-medium text-white">Review Transaction</h3>
+              <Badge variant="secondary">{INTENT_LABELS[intent.action]}</Badge>
+            </div>
+
+            <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4">
+              <p className="text-brand-muted text-sm">
+                DeepBook uses a{" "}
+                <span className="text-white">Balance Manager</span> to hold
+                trading funds and manage order settlement. You need to create it
+                once before placing market/limit orders.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-6">
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              disabled={isExecuting}
+              className="flex-1 rounded-xl border-white/10 text-white hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onExecute}
+              disabled={isExecuting}
+              className="bg-brand-accent flex-1 rounded-xl text-white hover:bg-[#4DA3FF]"
+            >
+              {isExecuting ? (
+                <>
+                  <span className="mr-2 inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Creating...
+                </>
+              ) : (
+                "Create Balance Manager"
+              )}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const fromToken = intent.sell?.coinType?.split("::").pop() || "UNKNOWN";
+  const toToken = intent.buy?.coinType?.split("::").pop() || "UNKNOWN";
+
+  const priceImpactBps = quote?.priceImpactBps ?? 0;
+  const slippageBps = quote?.slippageBps ?? 0;
 
   return (
     <motion.div
@@ -74,7 +133,7 @@ export function ReviewCard({
             <div className="flex items-center justify-between border-b border-white/5 py-3">
               <span className="text-brand-muted text-sm">To (Estimated)</span>
               <span className="text-sm font-medium text-white">
-                ~{quote?.expectedOut} {toToken}
+                ~{quote?.expectedOut ?? "-"} {toToken}
               </span>
             </div>
 
@@ -84,7 +143,7 @@ export function ReviewCard({
                   Slippage Tolerance
                 </span>
                 <span className="text-sm text-white">
-                  {((quote?.slippageBps ?? 0) / 100).toFixed(2)}%
+                  {(slippageBps / 100).toFixed(2)}%
                 </span>
               </div>
 
@@ -92,12 +151,12 @@ export function ReviewCard({
                 <span className="text-brand-muted text-sm">Price Impact</span>
                 <span
                   className={
-                    (quote?.priceImpactBps ?? 0 > 100)
+                    priceImpactBps > 100
                       ? "text-destructive text-sm"
                       : "text-sm text-green-400"
                   }
                 >
-                  {((quote?.priceImpactBps ?? 0) / 100).toFixed(2)}%
+                  {(priceImpactBps / 100).toFixed(2)}%
                 </span>
               </div>
 
@@ -109,12 +168,12 @@ export function ReviewCard({
               <div className="flex items-center justify-between py-2.5">
                 <span className="text-brand-muted text-sm">Route</span>
                 <span className="text-brand-muted font-mono text-xs">
-                  {quote?.routePlan.market}
+                  {quote?.routePlan?.market ?? "-"}
                 </span>
               </div>
             </div>
 
-            {quote && quote.priceImpactBps > 100 && (
+            {priceImpactBps > 100 && (
               <div className="bg-destructive/10 border-destructive/20 mt-4 rounded-xl border p-3">
                 <p className="text-destructive text-sm">
                   High price impact detected. Consider reducing your trade size.
