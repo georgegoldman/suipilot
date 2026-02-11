@@ -249,7 +249,7 @@ npm run dev
 
 ## 👥 Team
 
-Built for ETHGlobal by @mhiskall282
+Built for ETHGlobal by [@georgegoldman](https://github.com/georgegoldman) & @mhiskall282
 
 - Automated strategies
 
