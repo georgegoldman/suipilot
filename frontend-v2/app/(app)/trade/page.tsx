@@ -60,6 +60,7 @@ export default function TradePage() {
     }
     if (!pendingTx) return;
     try {
+      await pendingTx.build({ client: dAppKit.getClient() });
       // will throw if the tx is malformed
       pendingTx.getData();
       console.log("TX ok:", pendingTx);
@@ -162,6 +163,7 @@ export default function TradePage() {
               <ReviewCard
                 intent={pendingIntent}
                 quote={pendingQuote} // can be null/undefined now if you made ReviewCard optional
+                summary={aiResponse}
                 onCancel={resetState}
                 onExecute={handleExecute}
                 isExecuting={isExecuting}

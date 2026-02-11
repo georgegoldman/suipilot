@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 interface ReviewCardProps {
   intent: IntentSpec;
   quote: Quote | null;
+  summary: string;
   onCancel: () => void;
   onExecute: () => void;
   isExecuting: boolean;
@@ -104,6 +105,16 @@ export function ReviewCard({
             <h3 className="font-medium text-white">Review Transaction</h3>
             <Badge variant="secondary">{INTENT_LABELS[intent.action]}</Badge>
           </div>
+
+          {/* ✅ User-friendly summary (the “GTC limit order…” line) */}
+          {summary?.trim() && (
+            <div className="mb-5 rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-sm text-white">{summary}</p>
+              <p className="text-brand-muted mt-1 text-xs">
+                Please confirm this matches what you intended before signing.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-0">
             <div className="flex items-center justify-between border-b border-white/5 py-3">

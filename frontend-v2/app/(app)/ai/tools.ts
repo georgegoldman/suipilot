@@ -34,6 +34,24 @@ const placeLimitOrderDeclaration = {
         type: Type.NUMBER,
         description: "The amount of the base asset to trade.",
       },
+      timeInForce: {
+        type: "string",
+        enum: ["GTC", "IOC", "FOK", "POST_ONLY"],
+        description: "Order restriction / TIF",
+      },
+      selfMatch: {
+        type: "string",
+        enum: ["ALLOW", "CANCEL_TAKER", "CANCEL_MAKER"],
+        description: "Self-matching behavior",
+      },
+      payWithDeep: {
+        type: "boolean",
+        description: "Pay fees with DEEP (DeepBook currently expects true)",
+      },
+      expireMs: {
+        type: "number",
+        description: "Expiration timestamp in ms",
+      },
     },
     required: ["pair", "side", "price", "quantity"],
   },

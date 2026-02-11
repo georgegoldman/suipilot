@@ -3,7 +3,7 @@ import { testnetPackageIds } from "./constant";
 
 // DeepBook V3 Package IDs
 export const DEEPBOOK_PACKAGE_ID = testnetPackageIds.DEEPBOOK_PACKAGE_ID;
-export const DEEPBOOK_MODULE = "deepbook";
+export const POOL_MODULE = "pool";
 export const BALANCE_MANAGER_MODULE = "balance_manager";
 export const DDEEP_TREASURY_ID = testnetPackageIds.DEEP_TREASURY_ID;
 
@@ -33,7 +33,9 @@ export function createBalanceManagerTx(signerAddress: string): Transaction {
 
   // Create the BalanceManager object
   const [manager] = tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${BALANCE_MANAGER_MODULE}::new`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: BALANCE_MANAGER_MODULE,
+    function: "new",
     arguments: [],
   });
 
@@ -55,7 +57,9 @@ export function depositTx(
   const tx = new Transaction();
 
   tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${BALANCE_MANAGER_MODULE}::deposit`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: POOL_MODULE,
+    function: "deposit",
     typeArguments: [coinType],
     arguments: [tx.object(balanceManagerId), tx.object(coinId)],
   });
@@ -77,7 +81,9 @@ export function withdrawTx(
 
   // Withdraw returns a Coin object
   const [withdrawnCoin] = tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${BALANCE_MANAGER_MODULE}::withdraw`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: BALANCE_MANAGER_MODULE,
+    function: "withdraw",
     typeArguments: [coinType],
     arguments: [tx.object(balanceManagerId), tx.pure.u64(amount)],
   });
@@ -96,28 +102,42 @@ export function placeLimitOrderTx(
   poolId: string,
   balanceManagerId: string,
   clientOrderId: number | bigint, // Unique ID for your tracking
+  orderType: number,
+  selfMatchingOption: number,
   price: number | bigint,
   quantity: number | bigint,
   isBid: boolean, // true = Buy, false = Sell
+  payWithDeep: boolean,
+  expirationTimestamp: number | bigint = Date.now() + 1000 * 60 * 60 * 24, // Default 1 day
   baseCoinType: string,
   quoteCoinType: string,
-  expirationTimestamp: number | bigint = Date.now() + 1000 * 60 * 60 * 24, // Default 1 day
-  restriction: number = ORDER_RESTRICTION.NO_RESTRICTION,
+  // restriction: number = ORDER_RESTRICTION.NO_RESTRICTION,
 ): Transaction {
   const tx = new Transaction();
 
+  const [tradeProof] = tx.moveCall({
+    package: DEEPBOOK_PACKAGE_ID,
+    module: BALANCE_MANAGER_MODULE,
+    function: "generate_proof_as_owner",
+    arguments: [tx.object(balanceManagerId)],
+  });
+
   tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${DEEPBOOK_MODULE}::place_limit_order`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: POOL_MODULE,
+    function: "place_limit_order",
     typeArguments: [baseCoinType, quoteCoinType],
     arguments: [
       tx.object(poolId),
       tx.object(balanceManagerId),
-      tx.pure.u64(clientOrderId),
+      tradeProof,
+      tx.pure.u8(orderType),
+      tx.pure.u8(selfMatchingOption),
       tx.pure.u64(price),
       tx.pure.u64(quantity),
       tx.pure.bool(isBid),
+      tx.pure.bool(payWithDeep),
       tx.pure.u64(expirationTimestamp),
-      tx.pure.u8(restriction),
       tx.object("0x6"), // The Clock object (always 0x6)
     ],
   });
@@ -141,7 +161,9 @@ export function placeMarketOrderTx(
   const tx = new Transaction();
 
   tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${DEEPBOOK_MODULE}::place_market_order`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: POOL_MODULE,
+    function: "place_market_order",
     typeArguments: [baseCoinType, quoteCoinType],
     arguments: [
       tx.object(poolId),
@@ -169,7 +191,9 @@ export function cancelOrderTx(
   const tx = new Transaction();
 
   tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${DEEPBOOK_MODULE}::cancel_order`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: POOL_MODULE,
+    function: "cancel_order",
     typeArguments: [baseCoinType, quoteCoinType],
     arguments: [
       tx.object(poolId),
@@ -197,7 +221,9 @@ export function swapExactBaseForQuoteTx(
 
   // 1. Perform Swap
   const [baseCoin, quoteCoin] = tx.moveCall({
-    target: `${DEEPBOOK_PACKAGE_ID}::${DEEPBOOK_MODULE}::swap_exact_base_for_quote`,
+    package: DEEPBOOK_PACKAGE_ID,
+    module: POOL_MODULE,
+    function: "swap_exact_base_for_quote",
     typeArguments: [baseCoinType, quoteCoinType],
     arguments: [
       tx.object(poolId),
