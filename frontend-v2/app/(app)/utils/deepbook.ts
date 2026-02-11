@@ -122,6 +122,15 @@ export function placeLimitOrderTx(
     arguments: [tx.object(balanceManagerId)],
   });
 
+  console.log({
+    isBid,
+    payWithDeep,
+    price: price.toString(),
+    quantity: quantity.toString(),
+    baseCoinType,
+    quoteCoinType,
+  });
+
   tx.moveCall({
     package: DEEPBOOK_PACKAGE_ID,
     module: POOL_MODULE,
