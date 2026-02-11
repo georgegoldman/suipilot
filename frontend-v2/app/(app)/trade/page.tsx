@@ -58,8 +58,10 @@ export default function TradePage() {
       );
       setPendingTx(tx);
     }
+    const account = dAppKit.stores.$connection.get().account;
     if (!pendingTx) return;
     try {
+      pendingTx.setSender(account!.address);
       await pendingTx.build({ client: dAppKit.getClient() });
       // will throw if the tx is malformed
       pendingTx.getData();

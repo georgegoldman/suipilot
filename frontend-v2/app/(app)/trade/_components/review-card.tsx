@@ -17,6 +17,7 @@ interface ReviewCardProps {
 export function ReviewCard({
   intent,
   quote,
+  summary,
   onCancel,
   onExecute,
   isExecuting,

@@ -131,6 +131,7 @@ export function placeLimitOrderTx(
       tx.object(poolId),
       tx.object(balanceManagerId),
       tradeProof,
+      tx.pure.u64(clientOrderId),
       tx.pure.u8(orderType),
       tx.pure.u8(selfMatchingOption),
       tx.pure.u64(price),
