@@ -1,4 +1,5 @@
-// app/dapp-kit.ts
+// app/(app)/dapp-kit.ts
+
 import { createDAppKit } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 
@@ -12,7 +13,6 @@ export const dAppKit = createDAppKit({
     new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
 });
 
-// Register types for hook type inference
 declare module "@mysten/dapp-kit-react" {
   interface Register {
     dAppKit: typeof dAppKit;

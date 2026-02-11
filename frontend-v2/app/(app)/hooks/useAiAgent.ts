@@ -9,14 +9,29 @@ import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { dAppKit } from "../dapp-kit";
 import { selectCoinObjectId } from "../lib/coinSelector";
 
+const SYMBOL_ALIASES: Record<string, string> = {
+  // DeepBook testnet uses "DB" stablecoins
+  USDC: "DBUSDC",
+  USDT: "DBUSDT",
+
+  // optional: common user typo
+  "USDC.E": "DBUSDC",
+};
+
 const COIN_TYPES = testnetCoins;
 const client = dAppKit.getClient();
 const userAddress = dAppKit.stores.$connection.get().account?.address;
 
 function coinTypeFromSymbol(symbol: string) {
-  const key = symbol.toUpperCase();
+  const raw = symbol.toUpperCase();
+  const key = SYMBOL_ALIASES[raw] ?? raw;
   const entry = (COIN_TYPES as any)[key];
-  if (!entry?.type) throw new Error(`Unsupported coin symbol: ${symbol}`);
+  if (!entry?.type) {
+    const supported = Object.keys(COIN_TYPES).join(", ");
+    throw new Error(
+      `Unsupported coin symbol: ${symbol} Supported on testnet: ${supported}`,
+    );
+  }
   return entry.type as string;
 }
 
@@ -121,6 +136,7 @@ export async function generateDeepBookTransaction(
           throw new Error("Please create an account first.");
 
         const pair = args!.pair as string; // "SUI/USDC"
+        console.log(pair);
         const [base, quote] = pair.split("/");
         const side = args!.side as "buy" | "sell";
         const price = String(args!.price);

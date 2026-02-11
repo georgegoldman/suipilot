@@ -10,6 +10,6 @@ export async function selectObject(
 
   if (!objectId)
     throw new Error(`No object of type ${type} found for owner ${owner}`);
-
+  console.log;
   return objectId;
 }

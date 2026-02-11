@@ -1,4 +1,4 @@
-// app/DAppKitClientProvider.tsx
+// app/(app)/DAppKitClientProvider.tsx
 "use client";
 
 import { DAppKitProvider, ConnectButton } from "@mysten/dapp-kit-react";

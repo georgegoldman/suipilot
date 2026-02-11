@@ -58,7 +58,7 @@ export function CommandTerminal({
       // check if this user has the balance manager in their wallet
       let balanceManagerId: string | undefined;
       try {
-        const balanceManagerId = await selectObject(
+        balanceManagerId = await selectObject(
           dAppKit.getClient(),
           dAppKit.stores.$connection.get().account!.address,
           "0xfb28c4cbc6865bd1c897d26aecbe1f8792d1509a20ffec692c800660cbec6982::balance_manager::BalanceManager",
